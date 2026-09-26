@@ -1,0 +1,127 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Fantasy Advisor</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏈</text></svg>">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="top">
+    <div class="brand">Fantasy Advisor</div>
+    <nav class="tabs" role="tablist">
+      <button role="tab" data-tab="draft" aria-selected="true">Draft</button>
+      <button role="tab" data-tab="week">This week</button>
+      <button role="tab" data-tab="waivers">Waivers</button>
+      <button role="tab" data-tab="help">Setup</button>
+    </nav>
+  </header>
+
+  <main>
+    <div id="status" class="status">Loading data…</div>
+
+    <section id="tab-draft" class="tab">
+      <div class="clock card" id="clock"></div>
+
+      <div class="grid2">
+        <div class="card">
+          <h2>Best picks for you now</h2>
+          <p class="muted small" id="rec-note"></p>
+          <ol class="recs" id="recs"></ol>
+        </div>
+        <div class="card">
+          <h2>Your team</h2>
+          <div id="myteam"></div>
+          <div class="row gap mt">
+            <button id="undo" class="btn">Undo last pick</button>
+            <button id="export" class="btn ghost">Save backup</button>
+            <label class="btn ghost">Load backup<input type="file" id="import" accept=".json" hidden></label>
+            <button id="reset" class="btn ghost danger">Reset draft</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="row between wrap gap">
+          <h2>Player board</h2>
+          <div class="row gap wrap">
+            <select id="sort" aria-label="Sort">
+              <option value="score">Sort: advisor score</option>
+              <option value="consensus">Sort: ESPN rank</option>
+              <option value="ros">Sort: rest-of-season pts</option>
+            </select>
+          </div>
+        </div>
+        <div class="row gap wrap mt">
+          <input id="search" type="search" placeholder="Search players…" autocomplete="off">
+          <div class="chips" id="poschips"></div>
+        </div>
+        <p class="muted small">Tap <b>Mine</b> when you draft someone and <b>Taken</b> when anyone else does, so the advisor always knows who's left.</p>
+        <div id="board" class="list"></div>
+      </div>
+
+      <details class="card">
+        <summary><h2 class="inline">Draft settings</h2></summary>
+        <div class="row gap wrap mt">
+          <label>Your draft slot
+            <select id="myslot"></select>
+          </label>
+          <label>Teams <input id="teams" type="number" min="4" max="16"></label>
+        </div>
+        <p class="muted small">ESPN usually reveals the draft order about an hour before the draft. Set your slot then.</p>
+        <h3>Pick log</h3>
+        <ol id="picklog" class="picklog small"></ol>
+      </details>
+    </section>
+
+    <section id="tab-week" class="tab" hidden>
+      <div class="card" id="matchup"></div>
+      <div class="card">
+        <h2>Recommended lineup</h2>
+        <p class="muted small" id="lineup-note"></p>
+        <div id="changes"></div>
+        <div id="lineup" class="list"></div>
+        <h3>Bench</h3>
+        <div id="bench" class="list"></div>
+      </div>
+      <details class="card">
+        <summary><h2 class="inline">Opponent's projected lineup</h2></summary>
+        <div id="opplineup" class="list mt"></div>
+      </details>
+    </section>
+
+    <section id="tab-waivers" class="tab" hidden>
+      <div class="card">
+        <div class="row between wrap gap">
+          <h2>Free agents worth a look</h2>
+          <select id="wsort" aria-label="Sort">
+            <option value="ros">Sort: rest of season</option>
+            <option value="next">Sort: this week</option>
+          </select>
+        </div>
+        <div class="chips mt" id="wchips"></div>
+        <p class="muted small" id="waiver-note"></p>
+        <div id="waivers" class="list"></div>
+      </div>
+    </section>
+
+    <section id="tab-help" class="tab" hidden>
+      <div class="card prose">
+        <h2>How this works</h2>
+        <p><b>Data:</b> a GitHub Action refreshes <code>data/sleeper.json</code> (stats and projections) and
+          <code>data/league.json</code> (your ESPN league) every 4 hours. If those files aren't there yet, the page pulls Sleeper data straight from your browser.</p>
+        <p><b>Draft advisor score</b> = points over a replacement-level player at that position,
+          plus a bonus when the next-best player at that position is likely to be much worse by your next turn,
+          times how much your roster needs that position.</p>
+        <p><b>Weekly lineup:</b> starts your highest-projected players. If you're the underdog it leans toward
+          high-ceiling players; if you're the favorite it leans toward safe ones.</p>
+        <h3>Data status</h3>
+        <div id="datastatus" class="small"></div>
+      </div>
+    </section>
+  </main>
+
+  <script src="app.js"></script>
+</body>
+</html>

@@ -1,0 +1,8 @@
+{
+  "leagueId": 884658106,
+  "teamId": 9,
+  "season": 2026,
+  "teams": 9,
+  "scoring": "ppr",
+  "roster": { "QB": 1, "RB": 2, "WR": 2, "TE": 1, "FLEX": 1, "DST": 1, "K": 1, "BE": 7 }
+}
