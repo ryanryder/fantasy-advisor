@@ -18,6 +18,10 @@ const FLEX_SHARE = {
 const DEFAULT_CV = { QB: 0.35, RB: 0.5, WR: 0.55, TE: 0.6, K: 0.4, DEF: 0.6 };
 // How much a bench player at each position is worth vs. a starter.
 const BENCH_MULT = { QB: 0.2, RB: 0.55, WR: 0.55, TE: 0.25, K: 0.02, DEF: 0.02 };
+// Typical bench makeup per team, for a second, deeper replacement level used to rank bench picks.
+const BENCH_SHARE = { QB: 0.6, RB: 2.5, WR: 2.5, TE: 0.6, K: 0, DEF: 0.4 };
+// Never roster more than this many at a position (a 3rd QB or 2nd kicker is a wasted pick).
+const ROSTER_CAP = { QB: 2, TE: 2, K: 1, DEF: 1 };
 const OUT_STATUSES = ['Out', 'IR', 'PUP', 'Sus', 'Suspended', 'NA', 'DNR'];
 const STORE_KEY = 'ffa-draft-v1';
 
@@ -186,13 +190,17 @@ function buildModel() {
     if (FLEX_SHARE[slot]) for (const [pos, share] of Object.entries(FLEX_SHARE[slot])) starters[pos] += n * teams * share;
     else for (const pos of SLOT_ELIG[slot] || []) starters[pos] += n * teams;
   }
-  const repl = {};
+  const repl = {}, deepRepl = {};
   for (const pos of POSITIONS) {
     const sorted = Object.values(players).filter((p) => p.pos === pos).map((p) => p.ros).sort((a, b) => b - a);
-    const idx = Math.min(Math.max(Math.round(starters[pos]), 0), sorted.length - 1);
-    repl[pos] = sorted.length ? sorted[idx] : 0;
+    const at = (n) => (sorted.length ? sorted[Math.min(Math.max(Math.round(n), 0), sorted.length - 1)] : 0);
+    repl[pos] = at(starters[pos]);
+    deepRepl[pos] = at(starters[pos] + teams * BENCH_SHARE[pos]);
   }
-  for (const p of Object.values(players)) p.vorp = p.ros - repl[p.pos];
+  for (const p of Object.values(players)) {
+    p.vorp = p.ros - repl[p.pos];
+    p.dvorp = p.ros - deepRepl[p.pos]; // value as a bench player
+  }
 
   // Consensus order (what the rest of the family is likely to pick next): ESPN rank, then Sleeper's.
   const consensus = Object.values(players)
@@ -292,12 +300,15 @@ function recommend(ctx) {
       if (direct || flex) mult *= 2; else mult *= 0.05;
       if (direct || flex) reasons.push('you must fill starters now');
     }
+    const have = ctx.myPlayers.filter((m) => m.pos === p.pos).length;
+    if (ROSTER_CAP[p.pos] != null && have >= ROSTER_CAP[p.pos]) { mult *= 0.01; reasons.push(`you already have ${have}`); }
     if (p.out) { mult *= 0.4; flags.push(['bad', p.inj]); }
     else if (p.inj) { mult *= 0.9; flags.push(['warn', p.inj]); }
 
     const drop = Math.max(0, p.vorp - bestLater[p.pos]);
-    const base = Math.max(p.vorp + 0.5 * drop, 0);
-    const score = mult * base + 0.001 * p.ros * mult;
+    // Starters are judged against replacement starters; bench picks against replacement bench players.
+    const base = Math.max(p.vorp + 0.5 * drop, 0.25 * p.dvorp, 0);
+    const score = mult * base + 0.001 * Math.max(p.dvorp, 0) * mult;
     if (p.vorp > 0) reasons.unshift(`+${fmt(p.vorp, 0)} pts over a replacement ${p.pos}`);
     if (drop > 15 && mult >= 0.5) reasons.push(`next-best ${p.pos} by your next turn is ~${fmt(drop, 0)} pts worse`);
     if (likelyGoneBeforeMine.has(p.id)) flags.push(['warn', 'may be gone']);
