@@ -199,3 +199,20 @@ table.posbreak { width: 100%; border-collapse: collapse; font-size: 13.5px; }
   .dial { width: 120px; }
   .dialtext .hero { font-size: 26px; }
 }
+
+/* ---------- team picker ---------- */
+.whoami { margin-left: auto; font-weight: 600; max-width: 220px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.teampick {
+  border: 1px solid var(--line); border-radius: 14px; background: var(--card); color: var(--ink);
+  padding: 18px; width: min(440px, calc(100vw - 32px)); max-height: calc(100vh - 48px);
+}
+.teampick::backdrop { background: rgba(0, 0, 0, .45); }
+.teamlist { display: flex; flex-direction: column; gap: 8px; margin-top: 10px; }
+.teamopt {
+  font: inherit; text-align: left; display: flex; justify-content: space-between; gap: 10px; align-items: center;
+  padding: 10px 12px; border-radius: 10px; border: 1px solid var(--line); background: var(--bg); color: var(--ink); cursor: pointer;
+}
+.teamopt:hover, .teamopt.on { border-color: var(--accent); background: var(--accent-soft); }
+.sharelist { padding-left: 18px; }
+.sharelist li { margin-bottom: 6px; word-break: break-all; }
+.sharelist a { color: var(--accent); }

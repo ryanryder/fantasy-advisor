@@ -17,6 +17,7 @@
       <button role="tab" data-tab="league">League</button>
       <button role="tab" data-tab="help">Setup</button>
     </nav>
+    <button id="whoami" class="chip whoami" hidden aria-label="Change your team"></button>
   </header>
 
   <main>
@@ -164,6 +165,10 @@
           <li><span class="badge bad">red</span> problem: <i>Out</i> or on IR, on a <i>BYE</i>, or a <i>Tough</i> matchup</li>
           <li><span class="badge">gray</span> neutral info, like an average matchup</li>
         </ul>
+        <h3>Share with the family</h3>
+        <p>Everyone can use this same site. Send each person their link below and it opens as their team.
+          <b>Draft marks (Mine/Taken) are saved only on the device where they're tapped</b>, so nobody can see or change anyone else's draft board.</p>
+        <div id="sharelinks"></div>
         <h3>Data status</h3>
         <div id="datastatus" class="small"></div>
       </div>
@@ -171,6 +176,11 @@
   </main>
 
   <div id="tip" class="tip" role="tooltip" hidden></div>
+  <dialog id="teampick" class="teampick" aria-labelledby="teampick-h">
+    <h2 id="teampick-h">Which team is yours?</h2>
+    <p class="muted small">Saved on this device only. Change it anytime with the team button at the top.</p>
+    <div id="teamlist" class="teamlist"></div>
+  </dialog>
   <script src="app.js"></script>
 </body>
 </html>
