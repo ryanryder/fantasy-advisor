@@ -498,15 +498,21 @@ function renderWeek() {
   $('#bench').innerHTML = rec.bench.map((p) => lineupRow('BE', p, mine.espnSlots ? mine.espnSlots[p.id] : null)).join('') || '<p class="muted">Empty.</p>';
   $('#opplineup').innerHTML = opp ? opp.filled.map((f) => lineupRow(f.slot, f.p)).join('') : '<p class="muted">No opponent data.</p>';
 
+  // Empty starting slots are free points lost: call them out first.
+  const empties = rec.filled.filter((f) => !f.p).map((f) => (f.slot === 'DST' ? 'D/ST' : f.slot));
+  const emptyNote = empties.length
+    ? `<div class="change" style="background:var(--bad-soft)"><b>Nobody to start at ${esc(empties.join(', '))}.</b> Pick someone up on the Waivers tab.</div>`
+    : '';
+
   // Differences vs. what's currently set in ESPN.
   if (mine.espnSlots) {
     const recStarters = new Set(rec.filled.filter((f) => f.p).map((f) => f.p.id));
     const benched = mine.players.filter((p) => !['BE', 'IR'].includes(mine.espnSlots[p.id]) && !recStarters.has(p.id));
     const promote = mine.players.filter((p) => ['BE', 'IR'].includes(mine.espnSlots[p.id]) && recStarters.has(p.id));
-    $('#changes').innerHTML = promote.length || benched.length
+    $('#changes').innerHTML = emptyNote + (promote.length || benched.length
       ? `<div class="change"><b>Change in ESPN:</b> start ${promote.map((p) => `<b>${esc(p.name)}</b> (${fmt(weekProj(p))})`).join(', ') || '–'}; bench ${benched.map((p) => `${esc(p.name)} (${fmt(weekProj(p))})`).join(', ') || '–'}.</div>`
-      : '<div class="change" style="background:var(--accent-soft)">Your ESPN lineup already matches the recommendation. ✅</div>';
-  } else $('#changes').innerHTML = '';
+      : '<div class="change" style="background:var(--accent-soft)">Your ESPN lineup already matches the recommendation. ✅</div>');
+  } else $('#changes').innerHTML = emptyNote;
 }
 
 /* ---------------- waivers tab ---------------- */
@@ -524,6 +530,7 @@ function renderWaivers() {
   const mine = myRosterAndSource();
   const worstStarter = {}, worstRos = {};
   const { filled, bench } = assignLineup(mine.players, rosterSlots(), weekProj);
+  const emptyPos = new Set(filled.filter((f) => !f.p).flatMap((f) => SLOT_ELIG[f.slot] || []));
   for (const pos of POSITIONS) {
     const st = filled.filter((f) => f.p && f.p.pos === pos).map((f) => f.p);
     worstStarter[pos] = st.length ? st.reduce((a, b) => (weekProj(a) < weekProj(b) ? a : b)) : null;
@@ -541,7 +548,8 @@ function renderWaivers() {
     if (p.inj) flags.push([p.out ? 'bad' : 'warn', p.inj]);
     const ws = worstStarter[p.pos], wr = worstRos[p.pos];
     let why = '';
-    if (ws && weekProj(p) > weekProj(ws) + 1) why = `Better this week than your starter ${esc(ws.name)} (${fmt(weekProj(ws))}).`;
+    if (mine.players.length && emptyPos.has(p.pos)) why = `You have no one to start at ${p.pos === 'DEF' ? 'D/ST' : p.pos}. Grab one.`;
+    else if (ws && weekProj(p) > weekProj(ws) + 1) why = `Better this week than your starter ${esc(ws.name)} (${fmt(weekProj(ws))}).`;
     else if (wr && p.ros > wr.ros + 5) why = `Better rest of season than ${esc(wr.name)} (${fmt(wr.ros, 0)}).`;
     return `<div class="prow">
       <div class="name">${posTag(p.pos)} ${esc(p.name)} ${badges(flags)}</div>
