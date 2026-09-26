@@ -4,8 +4,10 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Fantasy Advisor</title>
+  <!-- Version is stamped by .github/workflows/stamp-version.yml on every code change. -->
+  <meta name="app-version" content="dev">
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏈</text></svg>">
-  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="style.css?v=dev">
 </head>
 <body>
   <header class="top">
@@ -21,6 +23,7 @@
   </header>
 
   <main>
+    <div id="update" class="update" hidden>A new version of the site is ready. <button class="btn sm" id="reload">Reload</button></div>
     <div id="status" class="status">Loading data…</div>
 
     <section id="tab-draft" class="tab">
@@ -181,6 +184,6 @@
     <p class="muted small">Saved on this device only. Change it anytime with the team button at the top.</p>
     <div id="teamlist" class="teamlist"></div>
   </dialog>
-  <script src="app.js"></script>
+  <script src="app.js?v=dev"></script>
 </body>
 </html>

@@ -896,7 +896,37 @@ function wire() {
   } catch (e) { /* ignore */ }
 }
 
+/* ---------------- stay current ---------------- */
+
+// GitHub Pages lets browsers cache files for ~10 minutes, so a visitor can get yesterday's code.
+// version.json is always fetched fresh; if it's newer than what's running, reload once
+// (safe: draft marks live in localStorage), or offer a Reload button if the page is mid-use.
+const RUNNING_VERSION = document.querySelector('meta[name="app-version"]')?.content || 'dev';
+async function latestVersion() {
+  try { return (await (await fetch('version.json', { cache: 'no-store' })).json()).version; } catch (e) { return null; }
+}
+async function checkForUpdate(atStartup) {
+  if (RUNNING_VERSION === 'dev') return;
+  const latest = await latestVersion();
+  if (!latest || latest === RUNNING_VERSION) return;
+  let tried = null;
+  try { tried = sessionStorage.getItem('ffa-reloaded-for'); } catch (e) { /* ignore */ }
+  if (atStartup && tried !== latest) {
+    try { sessionStorage.setItem('ffa-reloaded-for', latest); } catch (e) { /* ignore */ }
+    location.reload();
+    return;
+  }
+  $('#update').hidden = false;
+}
+function watchForUpdates() {
+  $('#reload').onclick = () => location.reload();
+  setInterval(() => checkForUpdate(false), 5 * 60 * 1000);
+  document.addEventListener('visibilitychange', () => { if (!document.hidden) checkForUpdate(false); });
+}
+
 async function main() {
+  checkForUpdate(true);
+  watchForUpdates();
   try {
     app.cfg = await loadJSON('config.json');
   } catch (e) {
