@@ -427,7 +427,7 @@ function weekProj(p) { return (p.out || p.onBye) ? 0 : p.next; }
 function myRosterAndSource() {
   const L = app.L, M = app.M;
   if (L && L.teams) {
-    const me = L.teams.find((t) => t.id === app.cfg.teamId);
+    const me = L.teams.find((t) => t.id === myTeamId());
     if (me && me.roster.length) {
       return { team: me, players: me.roster.map((r) => M.players[r.sid]).filter(Boolean), espnSlots: Object.fromEntries(me.roster.map((r) => [r.sid, r.slot])), source: 'espn' };
     }
@@ -639,7 +639,7 @@ function leagueTeams() {
   const L = app.L;
   if (L && L.teams && L.teams.some((t) => t.roster.length)) {
     return { source: 'espn', teams: L.teams.map((t) => ({
-      key: `t${t.id}`, name: t.name, owner: t.owner, me: t.id === app.cfg.teamId,
+      key: `t${t.id}`, name: t.name, owner: t.owner, me: t.id === myTeamId(),
       players: t.roster.map((r) => app.M.players[r.sid]).filter(Boolean),
     })) };
   }
@@ -709,6 +709,56 @@ function renderLeague() {
   }
 }
 
+/* ---------------- whose team is this? ---------------- */
+
+// Each device picks its own team (saved locally), so one link works for the whole family.
+// ?team=<id> in the URL preselects it, for sending someone a personal link.
+const TEAM_KEY = 'ffa-team';
+function myTeamId() { return app.me ?? app.cfg.teamId; }
+function teamLink(id) { return `${location.origin}${location.pathname}?team=${id}`; }
+
+function setTeam(id) {
+  app.me = id;
+  app.ui.opp = null;
+  try { localStorage.setItem(TEAM_KEY, String(id)); } catch (e) { /* storage blocked: lasts for this visit */ }
+  updateWho();
+}
+function updateWho() {
+  const btn = $('#whoami'), L = app.L;
+  const t = L && L.teams ? L.teams.find((x) => x.id === app.me) : null;
+  btn.hidden = !t;
+  if (t) btn.textContent = `👤 ${t.name}`;
+}
+function openTeamPicker() {
+  const L = app.L;
+  $('#teamlist').innerHTML = L.teams.map((t) => `
+    <button class="teamopt ${t.id === app.me ? 'on' : ''}" data-team="${t.id}">
+      <b>${esc(t.name)}</b>${t.owner ? `<span class="muted">${esc(t.owner)}</span>` : ''}
+    </button>`).join('');
+  $('#teampick').showModal();
+}
+function initTeam() {
+  const L = app.L;
+  if (!L || !L.teams || !L.teams.length) return; // no ESPN data: fall back to config.json's teamId
+  const valid = (id) => id != null && !Number.isNaN(id) && L.teams.some((t) => t.id === id);
+  const fromUrl = new URLSearchParams(location.search).get('team');
+  let id = fromUrl != null ? Number(fromUrl) : null;
+  if (!valid(id)) {
+    try { const v = localStorage.getItem(TEAM_KEY); id = v != null ? Number(v) : null; } catch (e) { id = null; }
+  }
+  if (valid(id)) setTeam(id);
+  else openTeamPicker();
+
+  $('#whoami').onclick = openTeamPicker;
+  $('#teamlist').onclick = (e) => {
+    const b = e.target.closest('[data-team]');
+    if (!b) return;
+    setTeam(Number(b.dataset.team));
+    $('#teampick').close();
+    renderAll();
+  };
+}
+
 /* ---------------- setup / status ---------------- */
 
 function ago(ts) {
@@ -720,14 +770,20 @@ function renderStatus() {
   const S = app.S, L = app.L;
   const parts = [`${S.season} week ${S.week}`, `stats ${S.live ? 'loaded live from Sleeper' : 'updated ' + ago(S.updated)}`];
   parts.push(L ? `ESPN league updated ${ago(L.updated)}` : 'ESPN league not connected');
+  // Stats refresh every 4h; if ESPN lags far behind them, the espn_s2 cookie has most likely expired.
+  const espnStale = L && S.updated && !S.live && S.updated - L.updated > 12 * 3600;
+  if (espnStale) parts.push('⚠️ ESPN data is stale. Your ESPN cookie probably expired (see Setup)');
   const el = $('#status');
   el.textContent = parts.join(' · ');
-  el.classList.toggle('warn', !L);
+  el.classList.toggle('warn', !L || espnStale);
   $('#datastatus').innerHTML = `
     <p>Sleeper data: ${S.live ? 'live from your browser (the <code>data/sleeper.json</code> file isn\'t there yet)' : `from <code>data/sleeper.json</code>, updated ${ago(S.updated)}`}.
       ${Object.keys(S.players).length} players.</p>
     <p>ESPN league: ${L ? `connected, updated ${ago(L.updated)}. ${L.teams.length} teams. ${Object.keys(L.espnRanks || {}).length} ESPN draft ranks.` : 'not connected. See README for the two cookie secrets.'}</p>
     <p>Roster slots: ${Object.entries(rosterSlots()).map(([k, v]) => `${k}×${v}`).join(', ')}</p>`;
+  $('#sharelinks').innerHTML = L && L.teams && L.teams.length
+    ? `<ul class="small sharelist">${L.teams.map((t) => `<li><b>${esc(t.name)}</b>${t.owner ? ` (${esc(t.owner)})` : ''}<br><a href="${esc(teamLink(t.id))}">${esc(teamLink(t.id))}</a></li>`).join('')}</ul>`
+    : '<p class="muted small">Available once the ESPN league is connected.</p>';
 }
 
 /* ---------------- state + wiring ---------------- */
@@ -860,6 +916,7 @@ async function main() {
   }
   try { app.L = await loadJSON('data/league.json'); } catch (e) { app.L = null; }
   wire();
+  initTeam();
   renderAll();
 }
 

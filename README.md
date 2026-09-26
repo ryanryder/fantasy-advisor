@@ -25,11 +25,22 @@ ESPN only shares a private league's data with a logged-in user, so the refresh s
    - `ESPN_S2` = the espn_s2 value
    - `ESPN_SWID` = the SWID value
 
-Secrets are encrypted and never shown in logs or on the site. The cookies expire after about a year.
+Secrets are encrypted and never shown in logs or on the site.
+
+**When to refresh the cookies:** `espn_s2` lasts about a year, but it dies early if you **log out of ESPN**
+in that browser or **change your ESPN password**. `SWID` is your account ID and basically never changes.
+If ESPN data stops updating, the site's status line turns yellow and says so. Log in to ESPN again, copy the
+new `espn_s2`, and paste it into the `ESPN_S2` secret (Settings → Secrets → edit).
 
 ### 3. Load the data
 Actions tab → **Refresh data** → **Run workflow**. After that it runs every 4 hours by itself.
 If the ESPN step can't connect, the run still succeeds with Sleeper data, and its log says why ESPN failed.
+
+## Sharing with the family
+Everyone uses the same site. On first visit it asks **"Which team is yours?"** and remembers the answer on
+that device. The **Setup** tab lists a personal link per team (`?team=<id>`) you can text to people.
+Draft marks (Mine/Taken) live only on the device where they're tapped, so nobody can see or change
+anyone else's draft board.
 
 ## Draft day
 1. Open the site on your phone and go to **Draft settings** → set **your draft slot** once ESPN shows the order.
