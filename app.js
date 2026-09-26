@@ -347,10 +347,14 @@ function renderDraft() {
     clock.innerHTML = `<div class="big">Draft complete 🎉</div><div class="muted">Head to <b>This week</b> for lineup advice.</div>`;
   } else {
     const who = ctx.onClock ? 'You are on the clock' : `Team in slot ${slotForPick(ctx.current, teams)} is picking`;
+    const upcoming = myPickNumbers().filter((p) => p >= ctx.current).slice(0, 5)
+      .map((p) => `${Math.ceil(p / teams)}.${String(((p - 1) % teams) + 1).padStart(2, '0')}`).join(', ');
+    const slotOpts = Array.from({ length: teams }, (_, i) => `<option value="${i + 1}" ${app.draft.slot === i + 1 ? 'selected' : ''}>${i + 1}</option>`).join('');
     clock.innerHTML = `
       <div><div class="muted small">Pick ${ctx.current} · Round ${ctx.round}.${String(ctx.inRound).padStart(2, '0')}</div>
-      <div class="big">${who}</div></div>
-      <div class="muted">${ctx.onClock ? '' : ctx.nextMine ? `Your pick is in <b>${ctx.picksUntilMine}</b> (pick ${ctx.nextMine})` : ''}</div>`;
+      <div class="big">${who}</div>
+      <div class="muted small">${ctx.onClock ? '' : ctx.nextMine ? `Your pick is in <b>${ctx.picksUntilMine}</b> · ` : ''}Your next picks: ${upcoming}</div></div>
+      <label>Your slot <select id="clockslot">${slotOpts}</select></label>`;
   }
 
   const recs = recommend(ctx);
@@ -648,7 +652,9 @@ function wire() {
     slotSel.innerHTML = Array.from({ length: app.draft.teams }, (_, i) => `<option value="${i + 1}" ${app.draft.slot === i + 1 ? 'selected' : ''}>${i + 1}</option>`).join('');
   };
   fillSlots();
-  slotSel.onchange = (e) => { app.draft.slot = Number(e.target.value); saveDraft(); renderAll(); };
+  const setSlot = (v) => { app.draft.slot = Number(v); slotSel.value = v; saveDraft(); renderAll(); };
+  slotSel.onchange = (e) => setSlot(e.target.value);
+  $('#clock').addEventListener('change', (e) => { if (e.target.id === 'clockslot') setSlot(e.target.value); });
   $('#teams').value = app.draft.teams;
   $('#teams').onchange = (e) => {
     app.draft.teams = Math.max(4, Math.min(16, Number(e.target.value) || 9));

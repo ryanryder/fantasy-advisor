@@ -58,6 +58,12 @@
           <div class="chips" id="poschips"></div>
         </div>
         <p class="muted small">Tap <b>Mine</b> when you draft someone and <b>Taken</b> when anyone else does, so the advisor always knows who's left.</p>
+        <p class="small legend">
+          <span class="pos QB">QB</span> <span class="pos RB">RB</span> <span class="pos WR">WR</span>
+          <span class="pos TE">TE</span> <span class="pos K">K</span> <span class="pos DEF">D/ST</span>
+          <span class="muted">position, color only</span> ·
+          <span class="badge good">good</span> <span class="badge warn">caution</span> <span class="badge bad">problem</span>
+        </p>
         <div id="board" class="list"></div>
       </div>
 
@@ -116,6 +122,17 @@
           times how much your roster needs that position.</p>
         <p><b>Weekly lineup:</b> starts your highest-projected players. If you're the underdog it leans toward
           high-ceiling players; if you're the favorite it leans toward safe ones.</p>
+        <h3>What the colors mean</h3>
+        <p><b>Position tags</b> are colored only so you can scan a list fast:
+          <span class="pos QB">QB</span> <span class="pos RB">RB</span> <span class="pos WR">WR</span>
+          <span class="pos TE">TE</span> <span class="pos K">K</span> <span class="pos DEF">D/ST</span>. The color says nothing about how good the player is.</p>
+        <p><b>Badges</b> do carry meaning:</p>
+        <ul class="small">
+          <li><span class="badge good">green</span> good: an <i>Easy</i> matchup, or <i>trending</i> (lots of people are adding him right now)</li>
+          <li><span class="badge warn">yellow</span> caution: <i>Questionable</i> or <i>Doubtful</i> injury, or <i>may be gone</i> before your pick</li>
+          <li><span class="badge bad">red</span> problem: <i>Out</i> or on IR, on a <i>BYE</i>, or a <i>Tough</i> matchup</li>
+          <li><span class="badge">gray</span> neutral info, like an average matchup</li>
+        </ul>
         <h3>Data status</h3>
         <div id="datastatus" class="small"></div>
       </div>
