@@ -138,7 +138,8 @@ def fetch_sleeper():
 
 def fetch_espn(raw_players):
     s2, swid = os.environ.get("ESPN_S2"), os.environ.get("ESPN_SWID")
-    cookies = {"espn_s2": s2, "SWID": swid} if s2 and swid else None
+    # Send whichever cookies we have; espn_s2 alone sometimes works when SWID can't be found.
+    cookies = {k: v for k, v in (("espn_s2", s2), ("SWID", swid)) if v} or None
     base = (f"https://lm-api-reads.fantasy.espn.com/apis/v3/games/ffl/seasons/{CONFIG['season']}"
             f"/segments/0/leagues/{CONFIG['leagueId']}")
     d = get(f"{base}?view=mTeam&view=mRoster&view=mMatchup&view=mSettings", cookies=cookies)
