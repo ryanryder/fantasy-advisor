@@ -14,6 +14,7 @@
       <button role="tab" data-tab="draft" aria-selected="true">Draft</button>
       <button role="tab" data-tab="week">This week</button>
       <button role="tab" data-tab="waivers">Waivers</button>
+      <button role="tab" data-tab="league">League</button>
       <button role="tab" data-tab="help">Setup</button>
     </nav>
   </header>
@@ -22,9 +23,10 @@
     <div id="status" class="status">Loading data…</div>
 
     <section id="tab-draft" class="tab">
+     <div class="layout draft-layout">
+      <div class="col">
       <div class="clock card" id="clock"></div>
-
-      <div class="grid2">
+      <div class="card" id="draftdial"></div>
         <div class="card">
           <h2>Best picks for you now</h2>
           <p class="muted small" id="rec-note"></p>
@@ -42,7 +44,8 @@
         </div>
       </div>
 
-      <div class="card">
+      <div class="col">
+      <div class="card boardcard">
         <div class="row between wrap gap">
           <h2>Player board</h2>
           <div class="row gap wrap">
@@ -79,10 +82,20 @@
         <h3>Pick log</h3>
         <ol id="picklog" class="picklog small"></ol>
       </details>
+      </div>
+     </div>
     </section>
 
     <section id="tab-week" class="tab" hidden>
+     <div class="layout week-layout">
+      <div class="col">
       <div class="card" id="matchup"></div>
+      <details class="card" id="oppcard">
+        <summary><h2 class="inline">Opponent's projected lineup</h2></summary>
+        <div id="opplineup" class="list mt"></div>
+      </details>
+      </div>
+      <div class="col">
       <div class="card">
         <h2>Recommended lineup</h2>
         <p class="muted small" id="lineup-note"></p>
@@ -91,10 +104,28 @@
         <h3>Bench</h3>
         <div id="bench" class="list"></div>
       </div>
-      <details class="card">
-        <summary><h2 class="inline">Opponent's projected lineup</h2></summary>
-        <div id="opplineup" class="list mt"></div>
-      </details>
+      </div>
+     </div>
+    </section>
+
+    <section id="tab-league" class="tab" hidden>
+     <div class="layout league-layout">
+      <div class="col">
+        <div class="card" id="leaguedial"></div>
+        <div class="card">
+          <h2>Where you're strong and weak</h2>
+          <p class="muted small">Your starters' projected points per week at each position vs. the league average.</p>
+          <div id="posbreak"></div>
+        </div>
+      </div>
+      <div class="col">
+        <div class="card">
+          <h2>Power rankings</h2>
+          <p class="muted small" id="league-note"></p>
+          <div id="leaguebars" class="bars"></div>
+        </div>
+      </div>
+     </div>
     </section>
 
     <section id="tab-waivers" class="tab" hidden>
@@ -139,6 +170,7 @@
     </section>
   </main>
 
+  <div id="tip" class="tip" role="tooltip" hidden></div>
   <script src="app.js"></script>
 </body>
 </html>
