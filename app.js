@@ -397,6 +397,8 @@ function renderDraft() {
     </div>`;
   }).join('') || '<p class="muted">No matching players.</p>';
 
+  renderDraftDial();
+
   // Pick log
   $('#picklog').innerHTML = app.draft.picks.map((pk, i) => {
     const p = M.players[pk.pid];
@@ -502,8 +504,8 @@ function renderWeek() {
       <div class="muted">vs</div>
       <div><div class="muted small">${esc(oppTeam ? oppTeam.name : 'Opponent')}</div><div class="score">${opp ? fmt(opp.mean) : '–'}</div></div>
     </div>
-    ${winP != null ? `<div class="mt"><div class="row between small"><span>Win chance</span><b>${Math.round(winP * 100)}%</b></div>
-      <div class="meter"><div style="width:${Math.round(winP * 100)}%"></div></div></div>` : ''}
+    ${winP != null ? `<div class="mt">${dialCard('Win chance', winP, ...(winP >= 0.6 ? ['good', 'Favored'] : winP >= 0.4 ? ['mid', 'Toss-up'] : ['bad', 'Underdog']),
+      `${Math.round(winP * 100)}%`, `Based on both teams' best projected lineups and how much each player's scoring swings week to week.`)}</div>` : ''}
     ${mine.source === 'draft' ? '<p class="muted small mt">Using your drafted players. Your ESPN roster isn\'t connected yet.</p>' : ''}`;
   const oppSel = $('#oppsel');
   if (oppSel) oppSel.onchange = (e) => { app.ui.opp = Number(e.target.value); renderWeek(); };
@@ -575,6 +577,138 @@ function renderWaivers() {
   }).join('') || '<p class="muted">Nothing here.</p>';
 }
 
+/* ---------------- strength dials + power rankings ---------------- */
+
+const ordinal = (n) => n + (['th', 'st', 'nd', 'rd'][(n % 100 - 20) % 10] || ['th', 'st', 'nd', 'rd'][n % 100] || 'th');
+
+// Semicircle gauge. v in [0,1]; tone is 'good' | 'mid' | 'bad'.
+function dialSVG(v, tone) {
+  v = Math.max(0, Math.min(1, v));
+  const cx = 100, cy = 100, r = 78;
+  const pt = (t) => [cx + r * Math.cos(Math.PI * (1 - t)), cy - r * Math.sin(Math.PI * (1 - t))];
+  const [x0, y0] = pt(0), [x1, y1] = pt(1), [xv, yv] = pt(v);
+  const needle = [cx + (r - 22) * Math.cos(Math.PI * (1 - v)), cy - (r - 22) * Math.sin(Math.PI * (1 - v))];
+  const color = `var(--tone-${tone})`;
+  return `<svg class="dial" viewBox="0 0 200 118" aria-hidden="true">
+    <path class="track" d="M${x0} ${y0} A${r} ${r} 0 0 1 ${x1} ${y1}" fill="none" stroke-width="16" stroke-linecap="round"/>
+    ${v > 0.005 ? `<path d="M${x0} ${y0} A${r} ${r} 0 0 1 ${xv.toFixed(2)} ${yv.toFixed(2)}" fill="none" stroke="${color}" stroke-width="16" stroke-linecap="round"/>` : ''}
+    <line class="needle" x1="${cx}" y1="${cy}" x2="${needle[0].toFixed(2)}" y2="${needle[1].toFixed(2)}" stroke-width="3" stroke-linecap="round"/>
+    <circle class="hub" cx="${cx}" cy="${cy}" r="6"/>
+    <text class="tick" x="${x0}" y="116" text-anchor="middle">low</text>
+    <text class="tick" x="${x1}" y="116" text-anchor="middle">high</text>
+  </svg>`;
+}
+function dialCard(title, v, tone, toneLabel, hero, sub) {
+  return `<h2>${title}</h2>
+    <div class="dialwrap" role="img" aria-label="${esc(`${title}: ${hero}, ${toneLabel}`)}">
+      ${dialSVG(v, tone)}
+      <div class="dialtext">
+        <div class="hero">${hero}</div>
+        <div class="tone ${tone}">${esc(toneLabel)}</div>
+        <p class="muted small">${sub}</p>
+      </div>
+    </div>`;
+}
+function rankTone(v) { return v >= 0.67 ? ['good', 'Top of the league'] : v >= 0.34 ? ['mid', 'Middle of the pack'] : ['bad', 'Behind the pack']; }
+
+function weeksLeft() { const S = app.S; return Math.max(1, (S.lastWeek || 17) - S.week + 1); }
+
+// Strength = best lineup's rest-of-season points + 20% credit for the top 4 bench players.
+function teamStrength(players) {
+  const { filled, bench } = assignLineup(players, rosterSlots(), (p) => p.ros);
+  const start = filled.reduce((a, f) => a + (f.p ? f.p.ros : 0), 0);
+  const depth = bench.map((p) => p.ros).sort((a, b) => b - a).slice(0, 4).reduce((a, b) => a + b, 0) * 0.2;
+  const byPos = {};
+  for (const f of filled) if (f.p) byPos[f.p.pos] = (byPos[f.p.pos] || 0) + f.p.ros;
+  return { start, depth, total: start + depth, ppw: start / weeksLeft(), filled, bench, byPos };
+}
+
+function draftTeams() {
+  const { picks, teams } = app.draft;
+  const by = {};
+  picks.forEach((pk, i) => {
+    const slot = slotForPick(i + 1, teams), p = app.M.players[pk.pid];
+    if (p) (by[slot] ||= []).push(p);
+  });
+  return Array.from({ length: teams }, (_, i) => i + 1).map((slot) => ({
+    key: `s${slot}`, name: slot === app.draft.slot ? 'You' : `Slot ${slot}`, owner: '',
+    me: slot === app.draft.slot, players: by[slot] || [],
+  }));
+}
+function leagueTeams() {
+  const L = app.L;
+  if (L && L.teams && L.teams.some((t) => t.roster.length)) {
+    return { source: 'espn', teams: L.teams.map((t) => ({
+      key: `t${t.id}`, name: t.name, owner: t.owner, me: t.id === app.cfg.teamId,
+      players: t.roster.map((r) => app.M.players[r.sid]).filter(Boolean),
+    })) };
+  }
+  return { source: 'draft', teams: app.draft.picks.length ? draftTeams() : [] };
+}
+function ranked(teams) {
+  const rows = teams.map((t) => ({ ...t, s: teamStrength(t.players) })).sort((a, b) => b.s.total - a.s.total);
+  rows.forEach((r, i) => { r.rank = i + 1; });
+  return rows;
+}
+function tipFor(r) {
+  const top = r.s.filled.filter((f) => f.p).sort((a, b) => b.p.ros - a.p.ros).slice(0, 3).map((f) => esc(f.p.name)).join(', ');
+  return `<b>${esc(r.name)}</b>${r.owner ? ` (${esc(r.owner)})` : ''}<br>${ordinal(r.rank)} · starters ${fmt(r.s.ppw)} pts/wk<br>`
+    + `Bench depth credit ${fmt(r.s.depth, 0)} pts${top ? `<br>Best: ${top}` : ''}`;
+}
+
+function renderDraftDial() {
+  const el = $('#draftdial');
+  const mineCount = app.draft.picks.filter((p) => p.mine).length;
+  if (!mineCount) {
+    el.innerHTML = dialCard('Your draft so far', 0, 'mid', 'No picks yet', '–', 'Make your first pick to see how your team stacks up against the other slots.');
+    return;
+  }
+  const rows = ranked(draftTeams());
+  const me = rows.find((r) => r.me), n = rows.length;
+  const v = n > 1 ? (n - me.rank) / (n - 1) : 1;
+  const [tone, label] = rankTone(v);
+  const avg = rows.reduce((a, r) => a + r.s.ppw, 0) / n;
+  el.innerHTML = dialCard('Your draft so far', v, tone, label, `${ordinal(me.rank)} of ${n}`,
+    `Your starters so far project <b>${fmt(me.s.ppw)}</b> pts/wk (league avg ${fmt(avg)}). Mid-round, teams that just picked have one extra player.`);
+}
+
+function renderLeague() {
+  const { source, teams } = leagueTeams();
+  if (!teams.length) {
+    $('#leaguedial').innerHTML = dialCard('Your roster strength', 0, 'mid', 'Waiting for the draft', '–', 'Rankings appear once players are drafted.');
+    $('#leaguebars').innerHTML = ''; $('#posbreak').innerHTML = ''; $('#league-note').textContent = '';
+    return;
+  }
+  const rows = ranked(teams);
+  const me = rows.find((r) => r.me), n = rows.length;
+  const avg = rows.reduce((a, r) => a + r.s.ppw, 0) / n;
+  if (me) {
+    const v = n > 1 ? (n - me.rank) / (n - 1) : 1;
+    const [tone, label] = rankTone(v);
+    const diff = me.s.ppw - avg;
+    $('#leaguedial').innerHTML = dialCard('Your roster strength', v, tone, label, `${ordinal(me.rank)} of ${n}`,
+      `Your best lineup projects <b>${fmt(me.s.ppw)}</b> pts/wk, ${fmt(Math.abs(diff))} ${diff >= 0 ? 'above' : 'below'} the league average (${fmt(avg)}).`);
+  }
+  $('#league-note').textContent = `Bar = each team's best starting lineup, projected points per week for the rest of the season. Hover or tap a team for details.${source === 'draft' ? ' (From your draft picks. ESPN rosters load after the draft.)' : ''}`;
+  const max = Math.max(...rows.map((r) => r.s.ppw), 1);
+  $('#leaguebars').innerHTML = rows.map((r) => `
+    <div class="barrow ${r.me ? 'me' : ''}" data-tip="${esc(tipFor(r))}" tabindex="0">
+      <div class="who">${r.rank}. <b>${esc(r.name)}</b>${r.owner ? ` <span class="muted">${esc(r.owner)}</span>` : ''}</div>
+      <div class="bartrack"><div class="bar" style="width:${Math.max(2, (r.s.ppw / max) * 82)}%"></div><span class="barval">${fmt(r.s.ppw)}</span></div>
+    </div>`).join('');
+
+  if (me) {
+    const wl = weeksLeft();
+    const posAvg = (pos) => rows.reduce((a, r) => a + (r.s.byPos[pos] || 0), 0) / n / wl;
+    $('#posbreak').innerHTML = `<table class="posbreak"><thead><tr><th>Position</th><th>You</th><th>League avg</th><th>Diff</th></tr></thead><tbody>${
+      POSITIONS.map((pos) => {
+        const mine = (me.s.byPos[pos] || 0) / wl, a = posAvg(pos), d = mine - a;
+        const k = d >= 1.5 ? 'good' : d <= -1.5 ? 'bad' : '';
+        return `<tr><td>${posTag(pos)}</td><td>${fmt(mine)}</td><td>${fmt(a)}</td><td><span class="badge ${k}">${d >= 0 ? '+' : '−'}${fmt(Math.abs(d))}</span></td></tr>`;
+      }).join('')}</tbody></table>`;
+  }
+}
+
 /* ---------------- setup / status ---------------- */
 
 function ago(ts) {
@@ -614,6 +748,7 @@ function renderAll() {
   renderDraft();
   renderWeek();
   renderWaivers();
+  renderLeague();
 }
 
 function wire() {
@@ -642,6 +777,22 @@ function wire() {
   };
   chips($('#poschips'), 'pos');
   chips($('#wchips'), 'wpos');
+
+  const tip = $('#tip');
+  const showTip = (el, x, y) => {
+    tip.innerHTML = el.dataset.tip; tip.hidden = false;
+    const w = tip.offsetWidth, h = tip.offsetHeight;
+    tip.style.left = `${Math.min(x + 14, window.innerWidth - w - 8)}px`;
+    tip.style.top = `${Math.max(8, y - h - 10)}px`;
+  };
+  document.addEventListener('mousemove', (e) => {
+    const el = e.target.closest('[data-tip]');
+    if (el) showTip(el, e.clientX, e.clientY); else tip.hidden = true;
+  });
+  document.addEventListener('click', (e) => {
+    const el = e.target.closest('[data-tip]');
+    if (el) { const r = el.getBoundingClientRect(); showTip(el, r.left + 20, r.top); } else tip.hidden = true;
+  });
 
   $('#search').oninput = (e) => { app.ui.q = e.target.value; renderDraft(); };
   $('#sort').onchange = (e) => { app.ui.sort = e.target.value; renderDraft(); };

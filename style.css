@@ -47,7 +47,7 @@ body {
   font: inherit; font-weight: 600; cursor: pointer; white-space: nowrap;
 }
 .tabs button[aria-selected="true"] { background: var(--accent-soft); color: var(--accent); }
-main { max-width: 1100px; margin: 0 auto; padding: 12px 16px 60px; }
+main { max-width: 1680px; margin: 0 auto; padding: 12px 16px 60px; }
 .card { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 14px; margin-bottom: 12px; }
 h2 { font-size: 17px; margin: 0 0 6px; }
 h2.inline { display: inline; }
@@ -134,3 +134,68 @@ label { font-size: 13px; color: var(--muted); display: inline-flex; flex-directi
 code { font-size: 12.5px; background: var(--chip); padding: 1px 4px; border-radius: 4px; }
 .legend { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; margin: 0 0 6px; }
 .clock label select { min-width: 64px; }
+
+/* ---------- layout: one column on phones, two on wide screens ---------- */
+.layout { display: flex; flex-direction: column; }
+.layout > .col { display: flex; flex-direction: column; min-width: 0; }
+@media (min-width: 1100px) {
+  .layout { display: grid; gap: 14px; align-items: start; }
+  .draft-layout { grid-template-columns: minmax(400px, 5fr) 7fr; }
+  .week-layout { grid-template-columns: minmax(380px, 4fr) 6fr; }
+  .league-layout { grid-template-columns: minmax(380px, 4fr) 6fr; }
+  /* Board scrolls inside the viewport so recommendations stay in view. */
+  .boardcard { display: flex; flex-direction: column; max-height: calc(100vh - 110px); position: sticky; top: 64px; }
+  .boardcard #board { overflow-y: auto; min-height: 0; flex: 1; }
+}
+@media (min-width: 1500px) {
+  #board .prow, #waivers .prow { grid-template-columns: minmax(220px, 1.1fr) 3fr auto; }
+  #board .prow .meta, #waivers .prow .meta { grid-column: 2; grid-row: 1; }
+  #board .prow .acts, #waivers .prow .acts { grid-column: 3; grid-row: 1; }
+  #waivers .prow .why { grid-column: 1 / -1; }
+}
+
+/* ---------- dials ---------- */
+:root { --track: #e4e8e3; --tone-good: #1f7a3d; --tone-mid: #b07000; --tone-bad: #c0392b; }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) { --track: #2a302b; --tone-good: #4cc27a; --tone-mid: #f0b04d; --tone-bad: #ff8a80; }
+}
+:root[data-theme="dark"] { --track: #2a302b; --tone-good: #4cc27a; --tone-mid: #f0b04d; --tone-bad: #ff8a80; }
+.dialwrap { display: flex; gap: 18px; align-items: center; flex-wrap: wrap; }
+.dial { width: 190px; max-width: 100%; flex: 0 0 auto; }
+.dial .track { stroke: var(--track); }
+.dial .needle { stroke: var(--ink); }
+.dial .hub { fill: var(--ink); }
+.dial .tick { fill: var(--muted); font-size: 10px; }
+.dialtext { min-width: 0; flex: 1 1 180px; }
+.dialtext .hero { font-size: 34px; font-weight: 700; line-height: 1.1; }
+.tone { font-size: 13px; font-weight: 700; display: inline-flex; align-items: center; gap: 5px; }
+.tone::before { content: ""; width: 9px; height: 9px; border-radius: 50%; background: currentColor; }
+.tone.good { color: var(--tone-good); } .tone.mid { color: var(--tone-mid); } .tone.bad { color: var(--tone-bad); }
+
+/* ---------- power-ranking bars ---------- */
+.bars { display: flex; flex-direction: column; gap: 8px; }
+.barrow { display: grid; grid-template-columns: minmax(120px, 34%) 1fr; gap: 10px; align-items: center; cursor: default; }
+.barrow .who { font-size: 13.5px; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.barrow .who b { font-weight: 600; }
+.barrow.me .who b { color: var(--accent); }
+.bartrack { position: relative; height: 22px; display: flex; align-items: center; }
+.bar { height: 14px; border-radius: 0 4px 4px 0; background: var(--muted); opacity: .45; }
+.barrow.me .bar { background: var(--accent); opacity: 1; }
+.barrow:hover .bar { opacity: .8; }
+.barrow.me:hover .bar { opacity: 1; }
+.barval { font-size: 12.5px; margin-left: 8px; color: var(--ink); white-space: nowrap; }
+
+table.posbreak { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+.posbreak th, .posbreak td { text-align: right; padding: 6px 4px; border-top: 1px solid var(--line); font-variant-numeric: tabular-nums; }
+.posbreak th:first-child, .posbreak td:first-child { text-align: left; }
+.posbreak th { color: var(--muted); font-weight: 600; font-size: 12px; border-top: 0; }
+
+.tip {
+  position: fixed; z-index: 50; pointer-events: none; max-width: 280px; background: var(--card); color: var(--ink);
+  border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; font-size: 12.5px; box-shadow: 0 4px 16px rgba(0,0,0,.18);
+}
+@media (max-width: 600px) {
+  .dialwrap { flex-wrap: nowrap; gap: 12px; }
+  .dial { width: 120px; }
+  .dialtext .hero { font-size: 26px; }
+}
