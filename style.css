@@ -216,3 +216,5 @@ table.posbreak { width: 100%; border-collapse: collapse; font-size: 13.5px; }
 .sharelist { padding-left: 18px; }
 .sharelist li { margin-bottom: 6px; word-break: break-all; }
 .sharelist a { color: var(--accent); }
+.update { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; padding: 10px 12px; margin-bottom: 10px; border-radius: 10px; background: var(--accent-soft); font-size: 14px; }
+.update[hidden] { display: none; }

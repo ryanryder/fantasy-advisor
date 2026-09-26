@@ -1,0 +1,32 @@
+name: Stamp version
+
+# Gives every code change a new version so browsers fetch fresh files instead of cached ones.
+# Pushes made with GITHUB_TOKEN don't trigger workflows, so this commit can't loop.
+on:
+  push:
+    branches: [main]
+    paths: ["index.html", "app.js", "style.css"]
+
+permissions:
+  contents: write
+
+concurrency:
+  group: push-to-main
+  cancel-in-progress: false
+
+jobs:
+  stamp:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Stamp commit SHA into index.html and version.json
+        run: |
+          V="${GITHUB_SHA::7}"
+          sed -i -E "s/(style\.css|app\.js)\?v=[^\"]*/\1?v=${V}/g; s/(name=\"app-version\" content=\")[^\"]*/\1${V}/" index.html
+          printf '{"version":"%s"}\n' "$V" > version.json
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add index.html version.json
+          git diff --cached --quiet && exit 0
+          git commit -m "Stamp version ${V}"
+          git pull --rebase origin main && git push
