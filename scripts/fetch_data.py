@@ -11,6 +11,7 @@ Stdlib only, so the GitHub Action needs no pip install.
 """
 import json
 import os
+import re
 import sys
 import time
 import urllib.error
@@ -33,6 +34,13 @@ ESPN_TEAMS = {
 ESPN_POS = {1: "QB", 2: "RB", 3: "WR", 4: "TE", 5: "K", 16: "DEF"}
 ESPN_SLOTS = {0: "QB", 2: "RB", 3: "RB/WR", 4: "WR", 5: "WR/TE", 6: "TE", 7: "OP",
               16: "DST", 17: "K", 20: "BE", 21: "IR", 23: "FLEX"}
+
+
+def norm_name(name):
+    """'Harold Fannin Jr.' and 'Harold Fannin' must match: ESPN keeps suffixes, Sleeper often drops them."""
+    n = re.sub(r"[.'’-]", "", (name or "").lower()).strip()
+    n = re.sub(r"\s+(jr|sr|ii|iii|iv|v)$", "", n)
+    return re.sub(r"\s+", " ", n)
 
 
 def get(url, headers=None, cookies=None, retries=3):
@@ -145,14 +153,16 @@ def fetch_espn(raw_players):
     d = get(f"{base}?view=mTeam&view=mRoster&view=mMatchup&view=mSettings", cookies=cookies)
 
     by_espn = {str(p.get("espn_id")): pid for pid, p in raw_players.items() if p.get("espn_id")}
-    by_name = {((p.get("full_name") or "").lower(), p.get("position")): pid
-               for pid, p in raw_players.items() if p.get("full_name")}
+    # Name fallback for players whose Sleeper record lacks an espn_id (common for rookies).
+    # Only active players with a team, so a retired namesake can't win the match.
+    by_name = {(norm_name(p.get("full_name")), p.get("position")): pid
+               for pid, p in raw_players.items() if p.get("full_name") and p.get("team")}
 
     def sleeper_id(espn_id, player):
         pos = ESPN_POS.get(player.get("defaultPositionId"))
         if pos == "DEF":
             return ESPN_TEAMS.get(player.get("proTeamId"))
-        return by_espn.get(str(espn_id)) or by_name.get(((player.get("fullName") or "").lower(), pos))
+        return by_espn.get(str(espn_id)) or by_name.get((norm_name(player.get("fullName")), pos))
 
     members = {m["id"]: (m.get("firstName") or m.get("displayName") or "").strip()
                for m in d.get("members", [])}

@@ -429,7 +429,8 @@ function myRosterAndSource() {
   if (L && L.teams) {
     const me = L.teams.find((t) => t.id === myTeamId());
     if (me && me.roster.length) {
-      return { team: me, players: me.roster.map((r) => M.players[r.sid]).filter(Boolean), espnSlots: Object.fromEntries(me.roster.map((r) => [r.sid, r.slot])), source: 'espn' };
+      const unmatched = me.roster.filter((r) => !M.players[r.sid]).map((r) => r.name || `ESPN #${r.espnId}`);
+      return { team: me, players: me.roster.map((r) => M.players[r.sid]).filter(Boolean), espnSlots: Object.fromEntries(me.roster.map((r) => [r.sid, r.slot])), source: 'espn', unmatched };
     }
   }
   const players = app.draft.picks.filter((p) => p.mine).map((p) => M.players[p.pid]).filter(Boolean);
@@ -506,7 +507,8 @@ function renderWeek() {
     </div>
     ${winP != null ? `<div class="mt">${dialCard('Win chance', winP, ...(winP >= 0.6 ? ['good', 'Favored'] : winP >= 0.4 ? ['mid', 'Toss-up'] : ['bad', 'Underdog']),
       `${Math.round(winP * 100)}%`, `Based on both teams' best projected lineups and how much each player's scoring swings week to week.`)}</div>` : ''}
-    ${mine.source === 'draft' ? '<p class="muted small mt">Using your drafted players. Your ESPN roster isn\'t connected yet.</p>' : ''}`;
+    ${mine.source === 'draft' ? '<p class="muted small mt">Using your drafted players. Your ESPN roster isn\'t connected yet.</p>' : ''}
+    ${mine.unmatched && mine.unmatched.length ? `<div class="change mt" style="background:var(--bad-soft)"><b>Missing from this page:</b> ${esc(mine.unmatched.join(', '))}<br>They're on your ESPN roster, but I couldn't match them to stats, so they're left out of the lineup and odds.</div>` : ''}`;
   const oppSel = $('#oppsel');
   if (oppSel) oppSel.onchange = (e) => { app.ui.opp = Number(e.target.value); renderWeek(); };
 
